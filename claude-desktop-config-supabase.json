@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "ai-image-analysis-local": {
+      "command": "node",
+      "args": ["/path/to/ai-image-analysis-mcp/dist/index.js"],
+      "env": {
+        "GEMINI_API_KEY": "your_gemini_api_key_here"
+      },
+      "description": "Local AI Image Analysis MCP Server"
+    },
+    "ai-image-analysis-supabase": {
+      "command": "node", 
+      "args": ["/path/to/ai-image-analysis-mcp/dist/mcp-supabase-proxy.js"],
+      "env": {
+        "SUPABASE_URL": "https://your-project.supabase.co",
+        "SUPABASE_ANON_KEY": "your_supabase_anon_key_here",
+        "SUPABASE_FUNCTION_NAME": "ai-image-analysis-mcp"
+      },
+      "description": "Supabase-backed AI Image Analysis MCP Server with file path conversion"
+    }
+  }
+}

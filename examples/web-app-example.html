@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ORBIT Gemini Analysis - Web Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+        .upload-area:hover {
+            border-color: #007bff;
+        }
+        .upload-area.dragover {
+            border-color: #007bff;
+            background-color: #f0f8ff;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .upload-btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .upload-btn:hover {
+            background: #0056b3;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        .controls select, .controls button {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .analyze-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .analyze-btn:hover {
+            background: #1e7e34;
+        }
+        .analyze-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+        .metadata {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            border: 1px solid #ddd;
+        }
+        .config {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc107;
+        }
+        .preview {
+            max-width: 300px;
+            max-height: 200px;
+            margin: 10px auto;
+            display: block;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖼️ ORBIT Gemini Image Analysis</h1>
+            <p>Web Interface for Supabase MCP Server</p>
+        </div>
+
+        <div class="config">
+            <h3>⚙️ Configuration</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <input type="url" id="supabaseUrl" placeholder="https://your-project.supabase.co" 
+                       style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                <input type="password" id="anonKey" placeholder="Supabase Anon Key" 
+                       style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+            <button onclick="testConnection()" id="testBtn" 
+                    style="background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
+                Test Connection
+            </button>
+            <span id="connectionStatus"></span>
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+            <p>📁 Drop an image here or click to select</p>
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                Choose Image
+            </button>
+            <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
+        </div>
+
+        <img id="preview" class="preview" style="display: none;">
+
+        <div class="controls">
+            <label for="analysisType">Analysis Type:</label>
+            <select id="analysisType">
+                <option value="">Auto-detect</option>
+                <option value="product">Product</option>
+                <option value="lifestyle">Lifestyle</option>
+            </select>
+            
+            <button class="analyze-btn" id="analyzeBtn" onclick="analyzeImage()" disabled>
+                🔍 Analyze Image
+            </button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let mcpClient = null;
+
+        // Initialize drag and drop
+        const uploadArea = document.getElementById('uploadArea');
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('Please select an image file.');
+                return;
+            }
+
+            selectedFile = file;
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.getElementById('preview');
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+
+            // Enable analyze button if we have connection
+            updateAnalyzeButton();
+        }
+
+        async function testConnection() {
+            const url = document.getElementById('supabaseUrl').value;
+            const key = document.getElementById('anonKey').value;
+            const status = document.getElementById('connectionStatus');
+            const testBtn = document.getElementById('testBtn');
+
+            if (!url || !key) {
+                status.innerHTML = ' ❌ Please enter both URL and API key';
+                return;
+            }
+
+            testBtn.disabled = true;
+            testBtn.textContent = 'Testing...';
+            status.innerHTML = ' 🔄 Testing connection...';
+
+            try {
+                // Test with a simple tools/list request
+                const response = await fetch(`${url}/functions/v1/orbit-mcp-server`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: 1,
+                        method: 'tools/list'
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.result && result.result.tools) {
+                        status.innerHTML = ` ✅ Connected! Found ${result.result.tools.length} tools`;
+                        mcpClient = { url, key };
+                        updateAnalyzeButton();
+                    } else {
+                        status.innerHTML = ' ❌ Invalid response from server';
+                    }
+                } else {
+                    status.innerHTML = ` ❌ Connection failed: ${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                status.innerHTML = ` ❌ Connection error: ${error.message}`;
+            }
+
+            testBtn.disabled = false;
+            testBtn.textContent = 'Test Connection';
+        }
+
+        function updateAnalyzeButton() {
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            analyzeBtn.disabled = !(selectedFile && mcpClient);
+        }
+
+        async function analyzeImage() {
+            if (!selectedFile || !mcpClient) {
+                showError('Please select an image and test connection first.');
+                return;
+            }
+
+            const resultsDiv = document.getElementById('results');
+            const analysisType = document.getElementById('analysisType').value;
+            
+            // Show loading
+            resultsDiv.innerHTML = `
+                <div class="results loading">
+                    <h3>🔄 Analyzing image...</h3>
+                    <p>This may take a few seconds...</p>
+                </div>
+            `;
+
+            try {
+                // Convert file to base64
+                const base64Data = await fileToBase64(selectedFile);
+                
+                // Make MCP request
+                const mcpRequest = {
+                    jsonrpc: '2.0',
+                    id: Date.now(),
+                    method: 'tools/call',
+                    params: {
+                        name: 'analyze_image',
+                        arguments: {
+                            image_data: base64Data,
+                            ...(analysisType && { analysis_type: analysisType })
+                        }
+                    }
+                };
+
+                const response = await fetch(`${mcpClient.url}/functions/v1/orbit-mcp-server`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${mcpClient.key}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(mcpRequest)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.error) {
+                    throw new Error(result.error.message);
+                }
+
+                // Parse the MCP response
+                const content = result.result.content[0].text;
+                const analysisData = JSON.parse(content);
+
+                // Display results
+                showResults(analysisData);
+
+            } catch (error) {
+                showError(`Analysis failed: ${error.message}`);
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    // Remove data URL prefix
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function showResults(data) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="results">
+                    <h3>✅ Analysis Complete</h3>
+                    <p><strong>Type:</strong> ${data.analysis_type}</p>
+                    <p><strong>Confidence:</strong> ${data.confidence}</p>
+                    <p><strong>Processing Time:</strong> ${data.processing_time_ms}ms</p>
+                    <p><strong>Security Scan:</strong> ${data.security_scan.file_validated ? '✅ Passed' : '❌ Failed'}</p>
+                    
+                    <h4>📊 Analysis Metadata:</h4>
+                    <div class="metadata">${JSON.stringify(data.metadata, null, 2)}</div>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="results error">
+                    <h3>❌ Error</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        // Load saved configuration
+        window.onload = function() {
+            const savedUrl = localStorage.getItem('supabaseUrl');
+            const savedKey = localStorage.getItem('anonKey');
+            
+            if (savedUrl) document.getElementById('supabaseUrl').value = savedUrl;
+            if (savedKey) document.getElementById('anonKey').value = savedKey;
+
+            // Save configuration on change
+            document.getElementById('supabaseUrl').addEventListener('change', (e) => {
+                localStorage.setItem('supabaseUrl', e.target.value);
+            });
+            document.getElementById('anonKey').addEventListener('change', (e) => {
+                localStorage.setItem('anonKey', e.target.value);
+            });
+        };
+    </script>
+</body>
+</html>

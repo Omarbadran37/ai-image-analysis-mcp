@@ -1,0 +1,30 @@
+{
+  "name": "ai-image-analysis-mcp",
+  "version": "2.0.0",
+  "description": "AI-powered image analysis MCP using Google Gemini with security features",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepare": "npm run build",
+    "security-check": "npm audit --audit-level moderate",
+    "test-security": "node -e \"console.log('Security tests would run here')\""
+  },
+  "keywords": ["gemini", "ai", "image-analysis", "mcp", "security", "google-ai", "vision"],
+  "author": "Open Source Contributors",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "@google/generative-ai": "^0.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
