@@ -126,10 +126,7 @@ ai-image-analysis-mcp/
 ## 🤝 Community Guidelines
 
 ### Code of Conduct
-- Be respectful and inclusive
-- Focus on constructive feedback
-- Help newcomers get started
-- Celebrate others' contributions
+Please note that this project is released with a Contributor Code of Conduct. By participating in this project you agree to abide by its terms. Please read our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ### Getting Help
 - Check existing documentation first

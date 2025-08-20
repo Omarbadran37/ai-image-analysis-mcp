@@ -401,6 +401,8 @@ This MCP can be integrated with various systems:
 
 ## 🤝 Contributing
 
+Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute.
+
 ### **Development Setup**
 ```bash
 npm run dev        # Watch mode development
@@ -416,6 +418,10 @@ npm run test-security
 # Manual testing with Claude Desktop
 # Use the provided configuration and test each tool
 ```
+
+## Code of Conduct
+
+This project has a [Code of Conduct](CODE_OF_CONDUCT.md) that all contributors are expected to follow. Please be respectful and welcoming to everyone.
 
 ## 🆕 What's New in v2.0 - Production Ready
 
